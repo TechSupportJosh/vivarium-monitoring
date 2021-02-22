@@ -12,10 +12,13 @@ app.use(express.json());
 
 const db = new sqlite3.Database(':memory:');
 
+let cache = [];
+
 // Initialise database
 db.serialize(function() {
     db.run(`CREATE TABLE IF NOT EXISTS sensor_data (
                 id INTEGER PRIMARY KEY, 
+                date DATETIME DEFAULT CURRENT_TIMESTAMP,
                 sensor VARCHAR(20), 
                 temperature DOUBLE, 
                 humidity INTEGER
@@ -23,12 +26,17 @@ db.serialize(function() {
     
     // load dummy data
     for (var i = 0; i < 0; i++) {
-        db.run("INSERT INTO sensor_data (sensor, temperature, humidity) VALUES ($sensor, $temperature, $humidity)", {
+        db.run("INSERT INTO sensor_data (date, sensor, temperature, humidity) VALUES ($date, $sensor, $temperature, $humidity)", {
+            $date: `2021-02-22 00:45:15`,
             $sensor: "cool", 
             $temperature: 20 + Math.random()*30,
             $humidity: Math.floor(Math.random()*100)
         });
-    }
+      }
+
+      db.all(`SELECT * FROM sensor_data`, (err, rows) => {
+        console.log(rows);
+      });
   });
   
 
@@ -43,13 +51,7 @@ const authMiddleware = (req, res, next) => {
 };
 
 app.get("/data", (req, res) => {
-  // TODO: Add cache
-  db.all("SELECT * FROM sensor_data", (err, rows) => {
-    if(err)
-      return res.sendStatus(500);
-
-    return res.json(rows);
-  });
+  return res.json(cache);
 });
 
 app.post("/data", authMiddleware, (req, res) => {
@@ -73,10 +75,22 @@ app.post("/data", authMiddleware, (req, res) => {
     }
 
     console.log(`Received datapoint from ${sensor}: ${temperature}°C, ${humidity}%`);
+    updateDataCache();
     return res.sendStatus(201);
   });
 });
 
+const updateDataCache = () => {
+  db.all(`SELECT * FROM sensor_data WHERE date > datetime('now', 'localtime', '-1 day');`, (err, rows) => {
+    if(err)
+      return console.error("Failed to retrieve sensor data.", err);
+
+    cache = JSON.parse(JSON.stringify(rows));
+  });
+}
+
 app.listen(9000, () => {
+  updateDataCache();
+  
   console.log("Server listening on port 9000");
 });
