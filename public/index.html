@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Vivarium Monitoring</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="css/bootstrap.min.css">
+    </head>
+    <body>
+        <div class="container">
+            <div class="row text-center">
+                <div class="col-4">
+                    <h4>Cool End Sensor</h4>
+                    <h5><span id="left-temperature"></span>°C</h5>
+                    <h5><span id="left-humidity"></span>%</h5>
+                </div>
+                <div class="col-4">
+                    <h4>Middle Sensor</h4>
+                    <h5><span id="middle-temperature"></span>°C</h5>
+                    <h5><span id="middle-humidity"></span>%</h5>
+                </div>
+                <div class="col-4">
+                    <h4>Basking Sensor</h4>
+                    <h5><span id="right-temperature"></span>°C</h5>
+                    <h5><span id="right-humidity"></span>%</h5>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <canvas id="sensor-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <script src="js/chart.min.js"></script>
+        <script src="js/chartjs-plugin-colorschemes.min.js"></script>
+        <script src="js/index.js"></script>
+    </body>
+</html>

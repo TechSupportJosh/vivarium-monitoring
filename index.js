@@ -18,6 +18,7 @@ const postLimiter = rateLimit({
 });
 
 app.use(helmet());
+app.use(express.static(__dirname + "/public"));
 app.use(express.json());
 app.use(morgan("dev"));
 
@@ -36,16 +37,18 @@ db.serialize(function() {
             )`);
     
     // load dummy data
-    for (var i = 0; i < 0; i++) {
+    let now = new Date();
+    for (var i = 0; i < 1440/5; i++) {
+        now.setMinutes(now.getMinutes() - 5);
         db.run("INSERT INTO sensor_data (date, sensor, temperature, humidity) VALUES ($date, $sensor, $temperature, $humidity)", {
-            $date: `2021-02-22 00:45:15`,
-            $sensor: "cool", 
-            $temperature: 20 + Math.random()*30,
+            $date: now.toISOString(),
+            $sensor: "left",
+            $temperature: 20 + Math.random()*5,
             $humidity: Math.floor(Math.random()*100)
         });
       }
 
-      db.all(`SELECT * FROM sensor_data`, (err, rows) => {
+      db.all(`SELECT id, sensor, temperature, humidity, date FROM sensor_data`, (err, rows) => {
         console.log(rows);
       });
   });
@@ -92,7 +95,7 @@ app.post("/data", postLimiter, authMiddleware, (req, res) => {
 });
 
 const updateDataCache = () => {
-  db.all(`SELECT * FROM sensor_data WHERE date > datetime('now', 'localtime', '-1 day');`, (err, rows) => {
+  db.all(`SELECT id, sensor, temperature, humidity, cast(strftime("%s", date) as int) as date FROM sensor_data WHERE date > datetime('now', 'localtime', '-1 day');`, (err, rows) => {
     if(err)
       return console.error("Failed to retrieve sensor data.", err);
 
