@@ -10,27 +10,29 @@ const sensors = {
     }
 }
 
-const chartContext = document.getElementById("sensor-chart").getContext("2d");
+const temperatureChartContext = document.getElementById("temperature-chart").getContext("2d");
+const humidityChartContext = document.getElementById("humidity-chart").getContext("2d");
 const sensorNames = Object.keys(sensors);
 const sensorDisplayContainer = document.getElementById("sensor-display-container");
 
 Object.entries(sensors).forEach(([sensor, config]) => {
     sensorDisplayContainer.insertAdjacentHTML("beforeend", `
-        <div class="col-4">
-            <h4>${config.label} Sensor</h4>
-            <h5><span id="${sensor}-temperature"></span>°C</h5>
-            <h5><span id="${sensor}-humidity"></span>%</h5>
+        <div class="col-12 col-md-4">
+            <div class="card mb-2">
+                <div class="card-body">
+                    <h4 class="card-title">${config.label} Sensor</h4>
+                    <h5>Temperature: <span id="${sensor}-temperature"></span>°C</h5>
+                    <h5>Humidity: <span id="${sensor}-humidity"></span>%</h5>
+                </div>
+            </div>
         </div>
     `);
     config.temperature = document.getElementById(`${sensor}-temperature`);
     config.humidity = document.getElementById(`${sensor}-humidity`);
 });
 
-const temperatureChart = new Chart(chartContext, {
+const chartConfig = {
     type: "line",
-    data: {
-        datasets: []
-    },
     options: {
         scales: {
             xAxes: [{
@@ -45,7 +47,29 @@ const temperatureChart = new Chart(chartContext, {
                         hour: 'dd h:mm a'
                     }
                 }
-            }],
+            }]
+        },
+        plugins: {
+            colorschemes: {
+                scheme: "brewer.SetOne3"
+            }
+        },
+        animation: {
+            duration: 0
+        },
+        responsive: true,
+        maintainAspectRatio: false
+    }
+}
+
+const temperatureChart = new Chart(temperatureChartContext, {...chartConfig, 
+    data: {
+        datasets: []
+    },
+    options: {
+        ...chartConfig.options,
+        scales: {
+            ...chartConfig.options.scales,
             yAxes: [{
                 type: "linear",
                 scaleLabel: {
@@ -58,18 +82,40 @@ const temperatureChart = new Chart(chartContext, {
                 }
             }]
         },
-        plugins: {
-            colorschemes: {
-                scheme: "brewer.SetOne3"
-            }
-        },
-        animation: {
-            duration: 0
-        },
         tooltips: {
             callbacks: {
                 label: (item, data) => {
                     return data.datasets[item.datasetIndex].label + ": " + item.yLabel + "°C";
+                }
+            }
+        }
+    }
+});
+
+const humidityChart = new Chart(humidityChartContext, {...chartConfig, 
+    data: {
+        datasets: []
+    },
+    options: {
+        ...chartConfig.options,
+        scales: {
+            ...chartConfig.options.scales,
+            yAxes: [{
+                type: "linear",
+                scaleLabel: {
+                    display: true,
+                    labelString: "Humidity (%)"
+                },
+                ticks: {
+                    min: 10,
+                    max: 60
+                }
+            }]
+        },
+        tooltips: {
+            callbacks: {
+                label: (item, data) => {
+                    return data.datasets[item.datasetIndex].label + ": " + item.yLabel + "%";
                 }
             }
         }
@@ -82,6 +128,7 @@ const fetchData = async () => {
     
     // Clear graph data
     temperatureChart.data.datasets = [];
+    humidityChart.data.datasets = [];
 
     sensorNames.forEach(sensorName => {
         const sensorsWithName = data.filter(element => element.sensor === sensorName);
@@ -99,10 +146,20 @@ const fetchData = async () => {
                     y: data.temperature
                 }))
             });
+
+            humidityChart.data.datasets.push({
+                label: sensors[sensorName].label,
+                fill: false,
+                data: sensorsWithName.map(data => ({
+                    x: new Date(data.date * 1000),
+                    y: data.humidity
+                }))
+            });
         }
     });
 
     temperatureChart.update();
+    humidityChart.update();
 };
 
 fetchData();
