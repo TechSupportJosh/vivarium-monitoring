@@ -2,13 +2,17 @@ const express = require("express");
 const dotenv = require("dotenv");
 const safeCompare = require('safe-compare');
 const sqlite3 = require('sqlite3').verbose();
+const morgan = require("morgan");
+const helmet = require("helmet");
 
 const app = express();
 
 // Load environment vars
 dotenv.config();
 
+app.use(helmet());
 app.use(express.json());
+app.use(morgan("dev"));
 
 const db = new sqlite3.Database(':memory:');
 
