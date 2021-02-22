@@ -4,11 +4,18 @@ const safeCompare = require('safe-compare');
 const sqlite3 = require('sqlite3').verbose();
 const morgan = require("morgan");
 const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 const app = express();
 
 // Load environment vars
 dotenv.config();
+
+const postLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 25,
+  skipSuccessfulRequests: true
+});
 
 app.use(helmet());
 app.use(express.json());
@@ -58,7 +65,7 @@ app.get("/data", (req, res) => {
   return res.json(cache);
 });
 
-app.post("/data", authMiddleware, (req, res) => {
+app.post("/data", postLimiter, authMiddleware, (req, res) => {
   const {sensor, temperature, humidity} = req.body;
   // All requests must include a sensor name, temperature and humidity
   if(!sensor || !temperature || !humidity)
