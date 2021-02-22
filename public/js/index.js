@@ -1,19 +1,30 @@
 const sensors = {
     left: {
-        temperature: document.getElementById("left-temperature"),
-        humidity: document.getElementById("left-humidity")
+        label: "Cool End"
     },
     middle: {
-        temperature: document.getElementById("middle-temperature"),
-        humidity: document.getElementById("middle-humidity")
+        label: "Middle"
     },
     right: {
-        temperature: document.getElementById("right-temperature"),
-        humidity: document.getElementById("right-humidity")
+        label: "Basking"
     }
 }
+
 const chartContext = document.getElementById("sensor-chart").getContext("2d");
 const sensorNames = Object.keys(sensors);
+const sensorDisplayContainer = document.getElementById("sensor-display-container");
+
+Object.entries(sensors).forEach(([sensor, config]) => {
+    sensorDisplayContainer.insertAdjacentHTML("beforeend", `
+        <div class="col-4">
+            <h4>${config.label} Sensor</h4>
+            <h5><span id="${sensor}-temperature"></span>°C</h5>
+            <h5><span id="${sensor}-humidity"></span>%</h5>
+        </div>
+    `);
+    config.temperature = document.getElementById(`${sensor}-temperature`);
+    config.humidity = document.getElementById(`${sensor}-humidity`);
+});
 
 const temperatureChart = new Chart(chartContext, {
     type: "line",
@@ -27,10 +38,24 @@ const temperatureChart = new Chart(chartContext, {
                 scaleLabel: {
                     display: true,
                     labelString: "Time"
+                },
+                time: {
+                    unit: "hour",
+                    displayFormats: {
+                        hour: 'dd h:mm a'
+                    }
                 }
             }],
             yAxes: [{
-                type: "linear"
+                type: "linear",
+                scaleLabel: {
+                    display: true,
+                    labelString: "Temperature (°C)"
+                },
+                ticks: {
+                    min: 15,
+                    max: 45
+                }
             }]
         },
         plugins: {
@@ -40,6 +65,13 @@ const temperatureChart = new Chart(chartContext, {
         },
         animation: {
             duration: 0
+        },
+        tooltips: {
+            callbacks: {
+                label: (item, data) => {
+                    return data.datasets[item.datasetIndex].label + ": " + item.yLabel + "°C";
+                }
+            }
         }
     }
 });
@@ -60,7 +92,7 @@ const fetchData = async () => {
             sensors[sensorName].humidity.textContent = currentValue.humidity;
 
             temperatureChart.data.datasets.push({
-                label: sensorName,
+                label: sensors[sensorName].label,
                 fill: false,
                 data: sensorsWithName.map(data => ({
                     x: new Date(data.date * 1000),

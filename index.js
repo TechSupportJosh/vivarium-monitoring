@@ -43,9 +43,21 @@ db.serialize(function() {
         db.run("INSERT INTO sensor_data (date, sensor, temperature, humidity) VALUES ($date, $sensor, $temperature, $humidity)", {
             $date: now.toISOString(),
             $sensor: "left",
-            $temperature: 20 + Math.random()*5,
-            $humidity: Math.floor(Math.random()*100)
+            $temperature: Math.round((20 + Math.random()*5) * 10) / 10,
+            $humidity: Math.round(Math.floor(Math.random()*100))
         });
+        db.run("INSERT INTO sensor_data (date, sensor, temperature, humidity) VALUES ($date, $sensor, $temperature, $humidity)", {
+          $date: now.toISOString(),
+          $sensor: "middle",
+          $temperature: Math.round((23 + Math.random()*5) * 10) / 10,
+          $humidity: Math.round(Math.floor(Math.random()*100))
+      });
+      db.run("INSERT INTO sensor_data (date, sensor, temperature, humidity) VALUES ($date, $sensor, $temperature, $humidity)", {
+        $date: now.toISOString(),
+        $sensor: "right",
+        $temperature: Math.round((25 + Math.random()*5) * 10) / 10,
+        $humidity: Math.round(Math.floor(Math.random()*100))
+    });
       }
 
       db.all(`SELECT id, sensor, temperature, humidity, date FROM sensor_data`, (err, rows) => {
