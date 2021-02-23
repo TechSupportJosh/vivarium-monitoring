@@ -31,7 +31,7 @@ let cache = [];
 db.serialize(function() {
     db.run(`CREATE TABLE IF NOT EXISTS sensor_data (
                 id INTEGER PRIMARY KEY, 
-                date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                date DATETIME,
                 sensor VARCHAR(20), 
                 temperature DOUBLE, 
                 humidity INTEGER
@@ -73,16 +73,17 @@ app.get("/data", (req, res) => {
 });
 
 app.post("/data", postLimiter, authMiddleware, (req, res) => {
-  const {sensor, temperature, humidity} = req.body;
+  const {sensor, temperature, humidity, date} = req.body;
   // All requests must include a sensor name, temperature and humidity
   if(!sensor || !temperature || !humidity)
     return res.sendStatus(400);
 
-  if(typeof sensor !== "string" || typeof temperature !== "number" || typeof humidity !== "number")
+  if(typeof sensor !== "string" || typeof temperature !== "number" || typeof humidity !== "number"|| typeof date !== "number")
     return res.sendStatus(400);
 
-  db.run("INSERT INTO sensor_data (sensor, temperature, humidity) VALUES ($sensor, $temperature, $humidity)", {
+  db.run("INSERT INTO sensor_data (sensor, date, temperature, humidity) VALUES ($sensor, $date, $temperature, $humidity)", {
     $sensor: sensor,
+    $date: date,
     $temperature: temperature,
     $humidity: humidity
   }, (err) => {
@@ -99,7 +100,7 @@ app.post("/data", postLimiter, authMiddleware, (req, res) => {
 });
 
 const updateDataCache = () => {
-  db.all(`SELECT id, sensor, temperature, humidity, cast(strftime("%s", date) as int) as date FROM sensor_data WHERE date > datetime('now', 'localtime', '-${process.env.HISTORICAL_DATA_PERIOD} day');`, (err, rows) => {
+  db.all(`SELECT id, sensor, temperature, humidity, date FROM sensor_data WHERE datetime(date, "unixepoch") > datetime("now", "localtime", "-${process.env.HISTORICAL_DATA_PERIOD} day") ORDER BY date DESC;`, (err, rows) => {
     if(err)
       return console.error("Failed to retrieve sensor data.", err);
 
