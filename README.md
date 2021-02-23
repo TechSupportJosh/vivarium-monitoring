@@ -30,7 +30,17 @@ npm ci
 npm run start
 ```
 
-For configuration, you can use a .env file (see .env.example) to store the API key required to post data to the service. You can also pass these as normal environment variables which may be more useful when using Docker.
+For configuration, you can use a .env file (see .env.defaults for format) to specify any of these configuration values. You can also pass these as normal environment variables which may be more useful when using Docker.
+
+### Configuration values
+
+| Option                 | Description                                                                                                                             | Default Value | 
+|------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| PORT                   | The port the web server should listen at.                                                                                               | 9000          |
+| API_KEY                | The API key required to post data to the web server. If no API key is specified, a random one will be generated when the server starts. |               |
+| DB_FILE                | The file name for the SQLite database. If no file name is specified, an in memory database in used.                                     | data.db       |
+| HISTORICAL_DATA_PERIOD | How many days worth of data is shown on the web frontend.                                                                               | 1             |
+| SEED_DATABASE          | Generate random data to insert into the database. When this is true, HISTORICAL_DATA_PERIOD days worth of data will be generated.       | false         |
 
 ## Raspberry Pi
 TODO

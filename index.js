@@ -1,5 +1,5 @@
 const express = require("express");
-const dotenv = require("dotenv");
+const dotenv = require("dotenv-defaults");
 const safeCompare = require('safe-compare');
 const sqlite3 = require('sqlite3').verbose();
 const morgan = require("morgan");
@@ -22,7 +22,8 @@ app.use(express.static(__dirname + "/public"));
 app.use(express.json());
 app.use(morgan("dev"));
 
-const db = new sqlite3.Database(':memory:');
+// If no DB_FILE is specified, use an in-memory database.
+const db = new sqlite3.Database(process.env.DB_FILE === "" ? ":memory:" : process.env.DB_FILE);
 
 let cache = [];
 
@@ -36,33 +37,24 @@ db.serialize(function() {
                 humidity INTEGER
             )`);
     
-    // load dummy data
-    let now = new Date();
-    for (var i = 0; i < 1440/5; i++) {
-        now.setMinutes(now.getMinutes() - 5);
-        db.run("INSERT INTO sensor_data (date, sensor, temperature, humidity) VALUES ($date, $sensor, $temperature, $humidity)", {
-            $date: now.toISOString(),
-            $sensor: "left",
-            $temperature: Math.round((20 + Math.random()*5) * 10) / 10,
-            $humidity: Math.round(Math.floor(Math.random()*100))
-        });
-        db.run("INSERT INTO sensor_data (date, sensor, temperature, humidity) VALUES ($date, $sensor, $temperature, $humidity)", {
-          $date: now.toISOString(),
-          $sensor: "middle",
-          $temperature: Math.round((23 + Math.random()*5) * 10) / 10,
-          $humidity: Math.round(Math.floor(Math.random()*100))
+    // Generate dummy data
+    if(process.env.SEED_DATABASE === "true")
+    {
+      console.log("Seeding database with randomly generated data.");
+      ["left", "middle", "right"].forEach((sensorName) => {
+        let now = new Date();
+        // Generates HISTORICAL_DATA_PERIOD's days worth of data at 5 minute intervals
+        for (var i = 0; i < process.env.HISTORICAL_DATA_PERIOD * 1440/5; i++) {
+          now.setMinutes(now.getMinutes() - 5);
+          db.run("INSERT INTO sensor_data (date, sensor, temperature, humidity) VALUES ($date, $sensor, $temperature, $humidity)", {
+              $date: now.toISOString(),
+              $sensor: sensorName,
+              $temperature: Math.round((20 + Math.random()*5) * 10) / 10,
+              $humidity: Math.round(15 + Math.floor(Math.random()*35))
+          });
+        }
       });
-      db.run("INSERT INTO sensor_data (date, sensor, temperature, humidity) VALUES ($date, $sensor, $temperature, $humidity)", {
-        $date: now.toISOString(),
-        $sensor: "right",
-        $temperature: Math.round((25 + Math.random()*5) * 10) / 10,
-        $humidity: Math.round(Math.floor(Math.random()*100))
-    });
-      }
-
-      db.all(`SELECT id, sensor, temperature, humidity, date FROM sensor_data`, (err, rows) => {
-        console.log(rows);
-      });
+    }
   });
   
 
@@ -107,7 +99,7 @@ app.post("/data", postLimiter, authMiddleware, (req, res) => {
 });
 
 const updateDataCache = () => {
-  db.all(`SELECT id, sensor, temperature, humidity, cast(strftime("%s", date) as int) as date FROM sensor_data WHERE date > datetime('now', 'localtime', '-1 day');`, (err, rows) => {
+  db.all(`SELECT id, sensor, temperature, humidity, cast(strftime("%s", date) as int) as date FROM sensor_data WHERE date > datetime('now', 'localtime', '-${process.env.HISTORICAL_DATA_PERIOD} day');`, (err, rows) => {
     if(err)
       return console.error("Failed to retrieve sensor data.", err);
 
@@ -115,8 +107,16 @@ const updateDataCache = () => {
   });
 }
 
-app.listen(9000, () => {
+// Provide a warning if no API key is specified
+if(process.env.API_KEY === "")
+{
+  const crypto = require("crypto");
+  process.env.API_KEY = crypto.randomBytes(30).toString("hex");
+  console.warn(`No API key was specified. A random API key has been generated: ${process.env.API_KEY}\n`)
+}
+
+app.listen(process.env.PORT, () => {
   updateDataCache();
   
-  console.log("Server listening on port 9000");
+  console.log(`Server listening on port ${process.env.PORT}`);
 });
