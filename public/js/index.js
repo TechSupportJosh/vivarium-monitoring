@@ -23,12 +23,16 @@ Object.entries(sensors).forEach(([sensor, config]) => {
                     <h4 class="card-title">${config.label} Sensor</h4>
                     <h5>Temperature: <span id="${sensor}-temperature"></span>°C</h5>
                     <h5>Humidity: <span id="${sensor}-humidity"></span>%</h5>
+                    <p class="mb-0 text-muted">
+                        Received <span id="${sensor}-update-time" class="timeago" datetime="0">Never</span>
+                    </p>
                 </div>
             </div>
         </div>
     `);
     config.temperature = document.getElementById(`${sensor}-temperature`);
     config.humidity = document.getElementById(`${sensor}-humidity`);
+    config.lastUpdated = document.getElementById(`${sensor}-update-time`);
 });
 
 const chartConfig = {
@@ -132,11 +136,12 @@ const fetchData = async () => {
 
     sensorNames.forEach(sensorName => {
         const sensorsWithName = data.filter(element => element.sensor === sensorName);
-        const currentValue = sensorsWithName[sensorsWithName.length - 1];
+        const currentValue = sensorsWithName[0];
         if(currentValue)
         {
             sensors[sensorName].temperature.textContent = currentValue.temperature;
             sensors[sensorName].humidity.textContent = currentValue.humidity;
+            sensors[sensorName].lastUpdated.setAttribute("datetime", currentValue.date * 1000);
 
             temperatureChart.data.datasets.push({
                 label: sensors[sensorName].label,
@@ -157,6 +162,9 @@ const fetchData = async () => {
             });
         }
     });
+
+    timeago.cancel()
+    timeago.render(document.querySelectorAll(".timeago"), "en_GB");
 
     temperatureChart.update();
     humidityChart.update();
