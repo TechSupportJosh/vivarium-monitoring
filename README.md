@@ -42,5 +42,22 @@ For configuration, you can use a .env file (see .env.defaults for format) to spe
 | HISTORICAL_DATA_PERIOD | How many days worth of data is shown on the web frontend.                                                                               | 1             |
 | SEED_DATABASE          | Generate random data to insert into the database. When this is true, HISTORICAL_DATA_PERIOD days worth of data will be generated.       | false         |
 
+### POST structure
+When sending data to the web server, the `x-api-key` header must be set the value of API_KEY.
+
+An example of the POST request:
+```
+POST /data HTTP/1.1
+Host: localhost:9000
+x-api-key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+Content-Type: application/json
+{
+    "sensor": "left",
+    "temperature": 43,
+    "humidity": 23,
+    "date": 1614076123
+}
+```
+
 ## Raspberry Pi
 TODO
