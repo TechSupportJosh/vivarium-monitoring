@@ -34,13 +34,13 @@ For configuration, you can use a .env file (see .env.defaults for format) to spe
 
 ### Configuration values
 
-| Option                 | Description                                                                                                                             | Default Value | 
-|------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|---------------|
-| PORT                   | The port the web server should listen at.                                                                                               | 9000          |
-| API_KEY                | The API key required to post data to the web server. If no API key is specified, a random one will be generated when the server starts. |               |
-| DB_FILE                | The file name for the SQLite database. If no file name is specified, an in memory database in used.                                     | data.db       |
-| HISTORICAL_DATA_PERIOD | How many days worth of data is shown on the web frontend.                                                                               | 1             |
-| SEED_DATABASE          | Generate random data to insert into the database. When this is true, HISTORICAL_DATA_PERIOD days worth of data will be generated.       | false         |
+| Option                 | Description                                                                                                                             | Default Value    | 
+|------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|------------------|
+| PORT                   | The port the web server should listen at.                                                                                               | 9000             |
+| API_KEY                | The API key required to post data to the web server. If no API key is specified, a random one will be generated when the server starts. |                  |
+| DB_FILE                | The file name for the SQLite database. If no file name is specified, an in memory database in used.                                     | db/data.db       |
+| HISTORICAL_DATA_PERIOD | How many days worth of data is shown on the web frontend.                                                                               | 1                |
+| SEED_DATABASE          | Generate random data to insert into the database. When this is true, HISTORICAL_DATA_PERIOD days worth of data will be generated.       | false            |
 
 ### POST structure
 When sending data to the web server, the `x-api-key` header must be set the value of API_KEY.
@@ -57,6 +57,14 @@ Content-Type: application/json
     "humidity": 23,
     "date": 1614076123
 }
+```
+
+### Running with Docker
+When running with Docker, it's recommended to mount the db directory to a directory on the host so the data is persisted. The app is copied to `/usr/src/app`, therefore you should mount `/usr/src/app/db` to a folder on the host.
+
+```
+docker build -t vivarium vivarium-monitoring/
+docker run -p 9000:9000 -v /home/josh/vivarium-db:/usr/src/app/db vivarium
 ```
 
 ## Raspberry Pi
