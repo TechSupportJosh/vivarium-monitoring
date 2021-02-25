@@ -5,6 +5,7 @@ const sqlite3 = require('sqlite3').verbose();
 const morgan = require("morgan");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const Logger = require("./logger.js");
 
 const app = express();
 
@@ -17,10 +18,18 @@ const postLimiter = rateLimit({
   skipSuccessfulRequests: true
 });
 
+const logger = new Logger("server");
+const requestLogger = new Logger("request");
+const dbLogger = new Logger("database");
+
 app.use(helmet());
 app.use(express.static(__dirname + "/public"));
 app.use(express.json());
-app.use(morgan("dev"));
+app.use(morgan("dev", {
+  stream: {
+    write: (str) => requestLogger.info(str)
+  }
+}));
 
 // If no DB_FILE is specified, use an in-memory database.
 const db = new sqlite3.Database(process.env.DB_FILE === "" ? ":memory:" : process.env.DB_FILE);
@@ -40,7 +49,7 @@ db.serialize(function() {
     // Generate dummy data
     if(process.env.SEED_DATABASE === "true")
     {
-      console.log("Seeding database with randomly generated data.");
+      logger.info("Seeding database with randomly generated data.");
       ["left", "middle", "right"].forEach((sensorName) => {
         let now = new Date();
         // Generates HISTORICAL_DATA_PERIOD's days worth of data at 5 minute intervals
@@ -89,11 +98,11 @@ app.post("/data", postLimiter, authMiddleware, (req, res) => {
   }, (err) => {
     if(err)
     {
-      console.error("Error when inserting data into database", err);
+      dbLogger.error(`Failed to insert sensor data: ${err}`);
       return res.sendStatus(500);
     }
 
-    console.log(`Received datapoint from ${sensor}: ${temperature}°C, ${humidity}%`);
+    logger.info(`Inserted datapoint from ${sensor}: ${temperature}°C, ${humidity}%`);
     updateDataCache();
     return res.sendStatus(201);
   });
@@ -102,7 +111,7 @@ app.post("/data", postLimiter, authMiddleware, (req, res) => {
 const updateDataCache = () => {
   db.all(`SELECT id, sensor, temperature, humidity, date FROM sensor_data WHERE datetime(date, "unixepoch") > datetime("now", "localtime", "-${process.env.HISTORICAL_DATA_PERIOD} day") ORDER BY date DESC;`, (err, rows) => {
     if(err)
-      return console.error("Failed to retrieve sensor data.", err);
+      return dbLogger.error(`Failed to retrieve sensor data: ${err}`);
 
     cache = JSON.parse(JSON.stringify(rows));
   });
@@ -113,11 +122,11 @@ if(process.env.API_KEY === "")
 {
   const crypto = require("crypto");
   process.env.API_KEY = crypto.randomBytes(30).toString("hex");
-  console.warn(`No API key was specified. A random API key has been generated: ${process.env.API_KEY}\n`)
+  logger.warn(`No API key was specified. A random API key has been generated: ${process.env.API_KEY}`)
 }
 
 app.listen(process.env.PORT, () => {
   updateDataCache();
   
-  console.log(`Server listening on port ${process.env.PORT}`);
+  logger.info(`Server listening on port ${process.env.PORT}`);
 });
