@@ -22,19 +22,33 @@ const logger = new Logger("server");
 const requestLogger = new Logger("request");
 const dbLogger = new Logger("database");
 
+const allowedIntervals = {
+  "1h": 60 * 60,
+  "3h": 60 * 60 * 3,
+  "12h": 60 * 60 * 12,
+  "1d": 60 * 60 * 24,
+  "3d": 60 * 60 * 24 * 3
+};
+
+const cache = {
+  "1h": [],
+  "3h": [],
+  "12h": [],
+  "1d": [],
+  "3d": []
+};
+
 app.use(helmet());
 app.use(express.static(__dirname + "/public"));
 app.use(express.json());
 app.use(morgan("dev", {
   stream: {
-    write: (str) => requestLogger.info(str)
+    write: (str) => requestLogger.info(str.replace("\n", ""))
   }
 }));
 
 // If no DB_FILE is specified, use an in-memory database.
 const db = new sqlite3.Database(process.env.DB_FILE === "" ? ":memory:" : process.env.DB_FILE);
-
-let cache = [];
 
 // Initialise database
 db.serialize(function() {
@@ -52,11 +66,11 @@ db.serialize(function() {
       logger.info("Seeding database with randomly generated data.");
       ["left", "middle", "right"].forEach((sensorName) => {
         let now = new Date();
-        // Generates HISTORICAL_DATA_PERIOD's days worth of data at 5 minute intervals
-        for (var i = 0; i < process.env.HISTORICAL_DATA_PERIOD * 1440/5; i++) {
+        // Generates 3 days worth of data at 5 minute intervals
+        for (var i = 0; i < 3 * 1440/5; i++) {
           now.setMinutes(now.getMinutes() - 5);
           db.run("INSERT INTO sensor_data (date, sensor, temperature, humidity) VALUES ($date, $sensor, $temperature, $humidity)", {
-              $date: now.toISOString(),
+              $date: Math.floor(now.getTime() / 1000),
               $sensor: sensorName,
               $temperature: Math.round((20 + Math.random()*5) * 10) / 10,
               $humidity: Math.round(15 + Math.floor(Math.random()*35))
@@ -78,7 +92,11 @@ const authMiddleware = (req, res, next) => {
 };
 
 app.get("/data", (req, res) => {
-  return res.json(cache);
+  interval = req.query.interval ?? "1d";
+  if(interval in cache)
+    return res.json(cache[interval]);
+  
+  return res.sendStatus(400);
 });
 
 app.post("/data", postLimiter, authMiddleware, (req, res) => {
@@ -109,11 +127,15 @@ app.post("/data", postLimiter, authMiddleware, (req, res) => {
 });
 
 const updateDataCache = () => {
-  db.all(`SELECT id, sensor, temperature, humidity, date FROM sensor_data WHERE datetime(date, "unixepoch") > datetime("now", "localtime", "-${process.env.HISTORICAL_DATA_PERIOD} day") ORDER BY date DESC;`, (err, rows) => {
+  db.all(`SELECT id, sensor, temperature, humidity, date FROM sensor_data WHERE datetime(date, "unixepoch") > datetime("now", "localtime", "-3 days") ORDER BY date DESC;`, (err, rows) => {
     if(err)
       return dbLogger.error(`Failed to retrieve sensor data: ${err}`);
 
-    cache = JSON.parse(JSON.stringify(rows));
+    const response = JSON.parse(JSON.stringify(rows));
+    Object.entries(allowedIntervals).forEach(([interval, seconds]) => {
+      const date = new Date(Date.now() - 1000 * seconds);
+      cache[interval] = response.filter(data => new Date(data.date * 1000) > date);
+    });
   });
 }
 

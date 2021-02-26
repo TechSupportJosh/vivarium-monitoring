@@ -14,6 +14,7 @@ const temperatureChartContext = document.getElementById("temperature-chart").get
 const humidityChartContext = document.getElementById("humidity-chart").getContext("2d");
 const sensorNames = Object.keys(sensors);
 const sensorDisplayContainer = document.getElementById("sensor-display-container");
+const dataPeriodSelector = document.getElementById("data-period");
 
 Object.entries(sensors).forEach(([sensor, config]) => {
     sensorDisplayContainer.insertAdjacentHTML("beforeend", `
@@ -46,7 +47,6 @@ const chartConfig = {
                     labelString: "Time"
                 },
                 time: {
-                    unit: "hour",
                     displayFormats: {
                         hour: 'dd h:mm a'
                     }
@@ -127,7 +127,7 @@ const humidityChart = new Chart(humidityChartContext, {...chartConfig,
 });
 
 const fetchData = async () => {
-    const response = await fetch("/data");
+    const response = await fetch(`/data?interval=${dataPeriodSelector.value}`);
     const data = await response.json();
     
     // Clear graph data
@@ -169,6 +169,8 @@ const fetchData = async () => {
     temperatureChart.update();
     humidityChart.update();
 };
+
+dataPeriodSelector.addEventListener("input", () => fetchData());
 
 fetchData();
 setInterval(fetchData, 30000);

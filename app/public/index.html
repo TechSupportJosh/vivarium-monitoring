@@ -17,6 +17,18 @@
 
             <div class="row">
                 <div class="col-12">
+                    <div class="form-group">
+                        <label>View data from the last: </label>
+                        <select id="data-period" class="form-control">
+                            <option value="1h">1 Hour</option>
+                            <option value="3h">3 Hours</option>
+                            <option value="12h">12 Hours</option>
+                            <option value="1d" selected>1 Day</option>
+                            <option value="3d">3 Days</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-12">
                     <h4>Temperature</h4>
                     <div style="height: 50vh;">
                         <canvas id="temperature-chart"></canvas>
