@@ -22,13 +22,12 @@ const logger = new Logger("server");
 const requestLogger = new Logger("request");
 const dbLogger = new Logger("database");
 
-const allowedIntervals = {
-  "1h": 60 * 60,
-  "3h": 60 * 60 * 3,
-  "12h": 60 * 60 * 12,
-  "1d": 60 * 60 * 24,
-  "3d": 60 * 60 * 24 * 3
-};
+const allowedIntervals = Object.create(null, {});
+allowedIntervals["1h"] = 60 * 60,
+allowedIntervals["3h"] = 60 * 60 * 3,
+allowedIntervals["12h"] = 60 * 60 * 12,
+allowedIntervals["1d"] = 60 * 60 * 24,
+allowedIntervals["3d"] = 60 * 60 * 24 * 3
 
 const cache = {
   "1h": [],
