@@ -92,7 +92,7 @@ const authMiddleware = (req, res, next) => {
 
 app.get("/data", (req, res) => {
   interval = req.query.interval ?? "1d";
-  if(interval in cache)
+  if(interval in allowedIntervals)
     return res.json(cache[interval]);
   
   return res.sendStatus(400);
